@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "SparkFunMMA8452Q.h"
+#include "BluetoothSerial.h"
 
 int freq = 5000;
 int LedRChannel = 0;
@@ -9,6 +10,10 @@ int LedRPin = GPIO_NUM_12;
 int LedGPin = GPIO_NUM_27;
 int LedBPin = GPIO_NUM_33;
 int resolution = 8;
+
+bool hasBTclient = false;
+
+BluetoothSerial SerialBT;
 
 // Create an MMA8452Q object, used throughout the rest of the sketch.
 MMA8452Q accel; // Default constructor, SA0 pin is HIGH
@@ -115,40 +120,51 @@ void setup()
     ledcAttachPin(LedGPin, LedGChannel);
     ledcAttachPin(LedBPin, LedBChannel);
 
-    setLed(0, 0, 255, 5,500,500);
-    
+    setLed(128, 0, 128, 5,500,500);
+
+    SerialBT.begin("ESP32test"); //Bluetooth device name
+    Serial.println("The device started, now you can pair it with bluetooth!");
 
     // Initialize the accelerometer with begin():
     // begin can take two parameters: full-scale range, and output data rate (ODR).
     // Full-scale range can be: SCALE_2G, SCALE_4G, or SCALE_8G (2, 4, or 8g)
     // ODR can be: ODR_800, ODR_400, ODR_200, ODR_100, ODR_50, ODR_12, ODR_6 or ODR_1
-    accel.begin(SCALE_2G, ODR_800); // Set up accel with +/-2g range, and slowest (1Hz) ODR
+    accel.begin(SCALE_8G, ODR_800); // Set up accel with +/-2g range, and slowest (1Hz) ODR
 }
 
 void loop()
 {
-    // accel.available() will return 1 if new data is available, 0 otherwise
-    if (accel.available())
+    if(!hasBTclient)
     {
-        setLed(0,128,0);
-        // To update acceleration values from the accelerometer, call accel.read();
-        accel.read();
+        if (SerialBT.hasClient())
+        {
+            hasBTclient = true;
+            setLed(0,120,255,4,400,400);
+        }
+    }
+    if(hasBTclient)
+    {
+        if (accel.available())
+        {
+            setLed(0,128,0);
+            accel.read();
 
-        // After reading, six class variables are updated: x, y, z, cx, cy, and cz.
-        // Those are the raw, 12-bit values (x, y, and z) and the calculated
-        // acceleration's in units of g (cx, cy, and cz).
-
-        // use the printAccelGraph funciton to print the values along with a bar
-        // graph, to see their relation to eachother:
-        printAccelGraph(accel.cx, "X", 20, 2.0);
-        printAccelGraph(accel.cy, "Y", 20, 2.0);
-        printAccelGraph(accel.cz, "Z", 20, 2.0);
-        Serial.println();
+        /*  printAccelGraph(accel.cx, "X", 20, 2.0);
+            printAccelGraph(accel.cy, "Y", 20, 2.0);
+            printAccelGraph(accel.cz, "Z", 20, 2.0);*/
+            if(SerialBT.hasClient())
+            {
+                SerialBT.println(String(accel.cx,10) + ";" +String(accel.cy,10)+";"+ String(accel.cz,10)+";");
+            }
+            else
+            {
+                hasBTclient = false;
+            }
+        }
     }
     else
     {
         setLed(255, 0, 0);
-        delay(1000);
     }
 
     // No need to delay, since our ODR is set to 1Hz, accel.available() will only return 1
