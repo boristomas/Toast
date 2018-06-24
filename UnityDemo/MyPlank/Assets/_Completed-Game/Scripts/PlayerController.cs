@@ -4,45 +4,44 @@
 using UnityEngine.UI;
 
 using System.Collections;
+using System.Collections.Generic;
 
 public class PlayerController : MonoBehaviour {
-	
-	// Create public variables for player speed, and for the Text UI game objects
-	public float speed;
-	public Text countText;
-	public Text winText;
 
-	// Create private references to the rigidbody component on the player, and the count of pick up objects picked up so far
-	private Rigidbody rb;
+    public float fX = 1f;
+    public float fY = 9.81f;
+    public float fZ = 1f;
+    public ForceMode mode = ForceMode.Impulse;
+
+    // Create private references to the rigidbody component on the player, and the count of pick up objects picked up so far
+    private Rigidbody rb;
 	private int count;
 	private SerialController serialController;
 	// At the start of the game..
 	void Start ()
 	{
 		serialController = GameObject.Find("SerialController").GetComponent<SerialController>();
-		
 		// Assign the Rigidbody component to our private rb variable
 		rb = GetComponent<Rigidbody>();
 
-		// Set the count to zero 
-	//	count = 0;
-
-		// Run the SetCountText function to update the UI (see below)
-	//	SetCountText ();
-
-		// Set the text property of our Win Text UI to an empty string, making the 'You Win' (game over message) blank
-		//winText.text = "";
 	}
 
 	string message = null;
 	string[] data = null;
     char[] delimiter = new char[1] { ';' };
     float x, y, z;
-	float fX = 1;
-	float fY = 1;
-	float fZ = 1;
-	// Each physics step..
-	void FixedUpdate ()
+
+
+    int baseCapacity = 10;
+    List<float> baseXs = new List<float>();
+    List<float> baseYs = new List<float>();
+    List<float> baseZs = new List<float>();
+    float baseX = 0;
+    float baseY = 0;
+    float baseZ = 0;
+    bool isBaseSet = false;
+    // Each physics step..
+    void FixedUpdate ()
 	{
 		 message = serialController.ReadSerialMessage();
 		if (message != null)
@@ -59,25 +58,57 @@ public class PlayerController : MonoBehaviour {
                 if (data.Length == 3)
                 {
                     x = float.Parse(data[0]);
-                    y = float.Parse(data[1]);
-                    z = float.Parse(data[2]);
-                    rb.AddForce(new Vector3(x * fX, y * fY, z * fZ), ForceMode.Acceleration);
+                    z = float.Parse(data[1]);
+                    y = float.Parse(data[2]);//mma z
+                //    x = 1;
+                 //   z = 1;
+
+                    if (!isBaseSet)
+                    {
+                        baseXs.Add(x);
+                        baseYs.Add(y);
+                        baseZs.Add(z);
+                        if (baseXs.Count > baseCapacity)
+                        {
+                            foreach (var item in baseXs)
+                            {
+                                baseX += item;
+                            }
+                            baseX = baseX / baseCapacity;
+
+                            foreach (var item in baseYs)
+                            {
+                                baseY += item;
+                            }
+                            baseY = baseY / baseCapacity;
+
+                            foreach (var item in baseZs)
+                            {
+                                baseZ += item;
+                            }
+                            baseZ = baseZ / baseCapacity;
+                            isBaseSet = true;
+                        }
+                    }
+                    else
+                    {
+                       /* x = Mathf.Round(x * 100f) / 100f;
+                        y = Mathf.Round(y * 100f) / 100f;
+                        z = Mathf.Round(z * 100f) / 100f;*/
+                        //rb.AddForce(new Vector3(x * fX, y * fY, z * fZ), mode);
+                        rb.AddForce(new Vector3((x-baseX) * fX, (y-baseY) * fY, (z-baseZ) * fZ), mode);
+                        
+                        //rb.AddForce(new Vector3((x/baseX)* fX, (y/baseY) * fY, (z/baseZ) * fZ), mode);
+                        //rb.AddTorque(new Vector3((x / baseX) * fX, (y / baseY) * fY, (z / baseZ) * fZ), mode);
+                    }
+                    //rb.AddTorque(new Vector3(x * fX, y * fY, z * fZ), ForceMode.Impulse);
+                    //rb.AddRelativeForce(new Vector3(x * fX, y * fY, z * fZ), ForceMode.Impulse);
+                   // rb.AddRelativeTorque(new Vector3(x * fX, y * fY, z * fZ), ForceMode.Impulse);
+
                 }
-
-
-				//transform.Rotate(* Time.deltaTime);
 			}
 		}
-		// Set some local float variables equal to the value of our Horizontal and Vertical Inputs
-		float moveHorizontal = Input.GetAxis ("Horizontal");
-		float moveVertical = Input.GetAxis ("Vertical");
-
-		// Create a Vector3 variable, and assign X and Z to feature our horizontal and vertical float variables above
-		Vector3 movement = new Vector3 (moveHorizontal, 0.0f, moveVertical);
-
-		// Add a physical force to our Player rigidbody using our 'movement' Vector3 above, 
-		// multiplying it by 'speed' - our public player speed that appears in the inspector
-		rb.AddForce (movement * speed);
+	
 	}
 
 	// When this game object intersects a collider with 'is trigger' checked, 

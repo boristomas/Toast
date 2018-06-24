@@ -43,7 +43,7 @@ byte MMA8452Q::begin(MMA8452Q_Scale fsr, MMA8452Q_ODR odr)
 	scale = fsr; // Haul fsr into our class variable, scale
 
 	//Wire.begin(); // Initialize I2C
-	Wire.begin(GPIO_NUM_23, GPIO_NUM_22, 100000);
+	Wire.begin(GPIO_NUM_23, GPIO_NUM_22, 10000);//+0
 
 	byte c = readRegister(WHO_AM_I); // Read WHO_AM_I register
 
